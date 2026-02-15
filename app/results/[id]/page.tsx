@@ -70,21 +70,18 @@ export default function ResultsPage() {
         });
     };
 
-    fetchSession();
-
-    // If justPaid and session might not be updated yet by webhook, poll a few times
+    // If just paid, verify payment directly with Stripe first
     if (justPaid) {
-      const interval = setInterval(() => {
-        setPollCount((prev) => {
-          if (prev >= 5) {
-            clearInterval(interval);
-            return prev;
-          }
-          fetchSession();
-          return prev + 1;
-        });
-      }, 2000);
-      return () => clearInterval(interval);
+      fetch("/api/verify-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId }),
+      })
+        .then((res) => res.json())
+        .then(() => fetchSession())
+        .catch(() => fetchSession());
+    } else {
+      fetchSession();
     }
   }, [sessionId, justPaid]);
 
